@@ -41,39 +41,6 @@ class BinaryTree:
         else:
             return self._search(current.right, value)
 
-    @staticmethod
-    def _parallel_search(node, target):
-        if node is None:
-            return False
-
-        print(f"Checking node: {node.value}")
-        if node.value == target:
-            print("Valor encontrado.")
-            return True
-
-        # Recursively search in left and right subtrees sequentially
-        left_found = BinaryTree._parallel_search(node.left, target)
-        if left_found:
-            return True
-        right_found = BinaryTree._parallel_search(node.right, target)
-        return right_found
-
-    @staticmethod
-    def parallel_search(node, target):
-        if node is None:
-            return False
-
-        if node.value == target:
-            print(f"Checking node: {node.value}")
-            print("Valor encontrado.")
-            return True
-
-        with multiprocessing.Pool(processes=2) as pool:
-            results = pool.starmap(
-                BinaryTree._parallel_search,
-                [(node.left, target), (node.right, target)]
-            )
-
         return any(results)
 
     def remove(self, value):
@@ -146,6 +113,38 @@ class BinaryTree:
         left_height = self._height(current.left)
         right_height = self._height(current.right)
         return 1 + max(left_height, right_height)
+
+    @staticmethod
+    def _parallel_search(node, target):
+        if node is None:
+            return False
+
+        print(f"Passando por: {node.value}")
+        if node.value == target:
+            print("Valor encontrado.")
+            return True
+
+        left_found = BinaryTree._parallel_search(node.left, target)
+        if left_found:
+            return True
+        right_found = BinaryTree._parallel_search(node.right, target)
+        return right_found
+
+    @staticmethod
+    def parallel_search(node, target):
+        if node is None:
+            return False
+
+        if node.value == target:
+            print(f"Passando por: {node.value}")
+            print("Valor encontrado.")
+            return True
+
+        with multiprocessing.Pool(processes=2) as pool:
+            results = pool.starmap(
+                BinaryTree._parallel_search,
+                [(node.left, target), (node.right, target)]
+            )
 
 if __name__ == "__main__":
     tree = BinaryTree()
