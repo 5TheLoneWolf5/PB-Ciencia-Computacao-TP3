@@ -1,120 +1,48 @@
+import multiprocessing
+import sys
+
 class Node:
     def __init__(self, value):
         self.value = value
         self.left = None
         self.right = None
 
-class BinaryTree():
-    def __init__(self):
-        self.root = None
+def update_max(node, shared_max, lock):
+    if node is None:
+        return
 
-    def add(self, value):
-        if self.root is None:
-            self.root = Node(value)
-        else:
-            self._add(self.root, value)
+    with lock:
+        if node.value > shared_max.value:
+            shared_max.value = node.value
 
-    def _add(self, current, value):
-        if value < current.value:
-            if current.left is None:
-                current.left = Node(value)
-            else:
-                self._add(current.left, value)
-        else:
-            if current.right is None:
-                current.right = Node(value)
-            else:
-                self._add(current.right, value)
+    jobs = []
+    if node.left:
+        p_left = multiprocessing.Process(target=update_max, args=(node.left, shared_max, lock))
+        jobs.append(p_left)
+        p_left.start()
+    if node.right:
+        p_right = multiprocessing.Process(target=update_max, args=(node.right, shared_max, lock))
+        jobs.append(p_right)
+        p_right.start()
 
+    for job in jobs:
+        job.join()
 
-    def search(self, value):
-        return self._search(self.root, value)
+if __name__ == '__main__':
+    multiprocessing.freeze_support() 
 
-    def _search(self, current, value):
-        if current is None:
-            return False
-        if current.value == value:
-            return True
-        if value < current.value:
-            return self._search(current.left, value)
-        else:
-            return self._search(current.right, value)
+    manager = multiprocessing.Manager()
 
-    def remove(self, value):
-        self.root = self._remove(self.root, value)
+    shared_max = manager.Value('i', -sys.maxsize - 1)
+    lock = manager.Lock()
 
-    def _remove(self, current, value):
-        if current is None:
-            return current
+    root = Node(15)
+    root.left = Node(10)
+    root.right = Node(20)
+    root.left.left = Node(8)
+    root.left.right = Node(12)
+    root.right.left = Node(17)
+    root.right.right = Node(25)
 
-        if value < current.value:
-            current.left = self._remove(current.left, value)
-        elif value > current.value:
-            current.right = self._remove(current.right, value)
-        else:
-            if current.left is None and current.right is None:
-                return None
-            if current.left is None:
-                return current.right
-            if current.right is None:
-                return current.left
-            min_larger_node = self._get_min(current.right)
-            current.value = min_larger_node.value
-            current.right = self._remove(current.right, min_larger_node.value)
-        return current
-
-    def _get_min(self, current):
-        while current.left is not None:
-            current = current.left
-        return current
-
-    def inorder(self):
-        result = []
-        self._inorder(self.root, result)
-        return result
-
-    def _inorder(self, current, result):
-        if current is not None:
-            self._inorder(current.left, result)
-            result.append(current.value)
-            self._inorder(current.right, result)
-
-    def preorder(self):
-        result = []
-        self._preorder(self.root, result)
-        return result
-
-    def _preorder(self, current, result):
-        if current is not None:
-            result.append(current.value)
-            self._preorder(current.left, result)
-            self._preorder(current.right, result)
-
-    def postorder(self):
-        result = []
-        self._postorder(self.root, result)
-        return result
-
-    def _postorder(self, current, result):
-        if current is not None:
-            self._preorder(current.left, result)
-            self._preorder(current.right, result)
-            result.append(current.value)
-
-    def height(self):
-        return self._height(self.root)
-
-    def _height(self, current):
-        if current is None:
-           return -1
-        left_height = self._height(current.left)
-        right_height = self._height(current.right)
-        return 1 + max(left_height, right_height)
-
-if __name__ == "__main__":
-    tree = BinaryTree()
-
-    for value in [43, 12, 4, 14, 4, 32]:
-        tree.add(value)
-
-    print(tree.postorder())
+    update_max(root, shared_max, lock)
+    print("Valor máximo: ", shared_max.value)

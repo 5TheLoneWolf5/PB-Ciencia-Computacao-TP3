@@ -1,98 +1,49 @@
+import multiprocessing
+
 class Node:
     def __init__(self, value):
         self.value = value
         self.left = None
         self.right = None
 
-class BinaryTree():
-    def __init__(self):
-        self.root = None
+def dfs_sequential(node, target):
+    if node is None:
+        return False
 
-    def add(self, value):
-        if self.root is None:
-            self.root = Node(value)
-        else:
-            self._add(self.root, value)
+    print(node.value)
+    if node.value == target:
+        print("Valor encontrado.")
+        return True
 
-    def _add(self, current, value):
-        if value < current.value:
-            if current.left is None:
-                current.left = Node(value)
-            else:
-                self._add(current.left, value)
-        else:
-            if current.right is None:
-                current.right = Node(value)
-            else:
-                self._add(current.right, value)
+    if dfs_sequential(node.left, target):
+        return True
+    if dfs_sequential(node.right, target):
+        return True
+    return False
 
+def dfs_parallel(node, target):
+    if node is None:
+        return False
 
-    def search(self, value):
-        return self._search(self.root, value)
+    print(node.value)
+    if node.value == target:
+        print("Valor encontrado.")
+        return True
 
-    def _search(self, current, value):
-        if current is None:
-            return False
-        if current.value == value:
-            return True
-        if value < current.value:
-            return self._search(current.left, value)
-        else:
-            return self._search(current.right, value)
+    with multiprocessing.Pool(processes=2) as pool:
+        results = pool.starmap(dfs_sequential, [(node.left, target), (node.right, target)])
 
-    def remove(self, value):
-        self.root = self._remove(self.root, value)
-
-    def _remove(self, current, value):
-        if current is None:
-            return current
-
-        if value < current.value:
-            current.left = self._remove(current.left, value)
-        elif value > current.value:
-            current.right = self._remove(current.right, value)
-        else:
-            if current.left is None and current.right is None:
-                return None
-            if current.left is None:
-                return current.right
-            if current.right is None:
-                return current.left
-            min_larger_node = self._get_min(current.right)
-            current.value = min_larger_node.value
-            current.right = self._remove(current.right, min_larger_node.value)
-        return current
-
-    def _get_min(self, current):
-        while current.left is not None:
-            current = current.left
-        return current
-
-    def dfs(self):
-        result = []
-        self._dfs(self.root, result)
-        return result
-
-    def _dfs(self, current, result):
-        if current is not None:
-            self._dfs(current.left, result)
-            result.append(current.value)
-            self._dfs(current.right, result)
-
-    def height(self):
-        return self._height(self.root)
-
-    def _height(self, current):
-        if current is None:
-           return -1
-        left_height = self._height(current.left)
-        right_height = self._height(current.right)
-        return 1 + max(left_height, right_height)
+    return any(results)
 
 if __name__ == "__main__":
-    tree = BinaryTree()
+    root = Node(1)
+    root.left = Node(2)
+    root.right = Node(3)
+    root.left.left = Node(4)
+    root.left.right = Node(5)
+    root.right.left = Node(6)
+    root.right.right = Node(7)
 
-    for value in [43, 12, 4, 14, 4, 32]:
-        tree.add(value)
+    target = 5
 
-    print(tree.dfs())
+    dfs_parallel(root, target)
